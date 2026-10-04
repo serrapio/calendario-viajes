@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calendario de Viajes</title>
+<style>
+:root {
+  --bg:#eef1f8;
+  --card:#ffffff;
+  --line:#e4e8f2;
+  --ink:#0f172a;
+  --muted:#64748b;
+  --accent:#6366f1;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+html, body { height:100%; }
+body {
+  font-family:"Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  background:
+    radial-gradient(1000px 500px at 85% -10%, rgba(139,92,246,.12), transparent 60%),
+    radial-gradient(800px 400px at -10% 10%, rgba(99,102,241,.12), transparent 55%),
+    var(--bg);
+  color:var(--ink);
+}
+.topbar {
+  position:sticky; top:0; z-index:50;
+  display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;
+  padding:12px 20px;
+  background:linear-gradient(120deg,#4f46e5,#7c3aed 60%,#9333ea);
+  color:#fff;
+  box-shadow:0 4px 18px rgba(79,70,229,.35);
+}
+.brand { display:flex; align-items:center; gap:10px; }
+.brand svg { width:26px; height:26px; }
+.brand h1 { font-size:17px; font-weight:700; letter-spacing:.2px; }
+.session-controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.session-controls input, .session-controls select, .toolbar select {
+  border:1px solid transparent; border-radius:10px; padding:8px 10px;
+  font:inherit; font-size:13px;
+}
+.session-controls input {
+  width:190px; background:rgba(255,255,255,.14); color:#fff;
+}
+.session-controls input::placeholder { color:rgba(255,255,255,.65); }
+.session-controls select { background:#fff; color:var(--ink); max-width:170px; }
+button {
+  font:inherit; cursor:pointer; border:none; border-radius:10px;
+  padding:8px 14px; font-size:13px; font-weight:600;
+  background:#fff; color:var(--ink); transition:transform .15s, background .15s;
+}
+button:hover { transform:translateY(-1px); }
+.btn-ghost { background:rgba(255,255,255,.16); color:#fff; }
+.btn-ghost:hover { background:rgba(255,255,255,.28); }
+.btn-accent { background:#fff; color:#4f46e5; }
+.btn-accent:hover { background:#eef2ff; }
+.toolbar {
+  display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+  padding:14px 20px 4px;
+}
+.toolbar label { font-size:13px; font-weight:600; color:var(--muted); }
+.toolbar select { border:1px solid var(--line); background:#fff; color:var(--ink); }
+.hint { font-size:12.5px; color:var(--muted); margin-left:auto; }
+#months {
+  display:flex; gap:18px; align-items:flex-start;
+  padding:16px 20px 40px;
+  overflow-x:auto;
+}
+#months::-webkit-scrollbar { height:10px; }
+#months::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:999px; }
+#months::-webkit-scrollbar-track { background:transparent; }
+.month-col {
+  flex:0 0 400px; max-width:400px;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:0 10px 30px rgba(15,23,42,.07);
+  padding:14px;
+}
+.m-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.m-head h2 { font-size:15px; font-weight:700; }
+.m-head h2 span { color:var(--muted); font-weight:600; }
+.m-head-actions { display:flex; align-items:center; gap:8px; }
+.badge {
+  background:#eef2ff; color:#4f46e5; font-size:11px; font-weight:700;
+  border-radius:999px; padding:2px 8px;
+}
+.icon-btn { background:transparent; color:var(--muted); font-size:16px; padding:2px 8px; border-radius:8px; }
+.icon-btn:hover { background:#f1f5f9; color:#dc2626; transform:none; }
+.icon-btn.img-btn:hover { background:#eef2ff; color:#4f46e5; }
+.weekdays { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-bottom:4px; }
+.weekdays span {
+  text-align:center; font-size:11px; font-weight:700;
+  color:var(--muted); text-transform:uppercase; padding:2px 0;
+}
+.grid { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
+.pad { min-height:110px; border-radius:10px; background:#f8fafc; }
+.day {
+  min-height:110px; border-radius:10px; border:1px solid var(--line);
+  background:#fff; padding:6px 6px 5px 7px;
+  display:flex; flex-direction:column; gap:2px; text-align:left;
+  transition:box-shadow .15s, border-color .15s, transform .15s;
+  overflow:hidden;
+}
+.day:hover { border-color:#c7d2fe; box-shadow:0 4px 12px rgba(99,102,241,.18); transform:translateY(-1px); }
+.day.sel { border-color:var(--accent); box-shadow:0 0 0 2px rgba(99,102,241,.35); }
+.day.colored { border-left:3px solid var(--c1); padding-left:5px; }
+.day-top { display:flex; justify-content:space-between; align-items:center; gap:2px; min-height:19px; }
+.num { font-size:12.5px; font-weight:700; color:#334155; line-height:1; }
+.num.today {
+  background:var(--accent); color:#fff; border-radius:50%;
+  min-width:19px; height:19px; display:inline-flex; align-items:center;
+  justify-content:center; padding:0 3px;
+}
+.day.wk .num { color:var(--accent); }
+.dots { display:flex; gap:2px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+.dot { width:9px; height:9px; border-radius:50%; display:block; box-shadow:0 0 0 1px rgba(15,23,42,.08); }
+.dots em { font-style:normal; font-size:10px; color:var(--muted); font-weight:700; }
+.t {
+  font-size:12px; font-weight:700; color:#0f172a; line-height:1.25;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  overflow:hidden; overflow-wrap:anywhere;
+}
+.s {
+  font-size:10.5px; color:#64748b; line-height:1.3;
+  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;
+  overflow:hidden; overflow-wrap:anywhere;
+}
+.editor {
+  margin-top:12px; border:1px solid var(--line); border-radius:14px;
+  background:#fbfcff; padding:12px; display:flex; flex-direction:column; gap:9px;
+  animation:fadeIn .18s ease;
+}
+@keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:none; } }
+.ed-head { display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; }
+.editor input, .editor textarea {
+  width:100%; border:1px solid var(--line); border-radius:10px; padding:9px 11px;
+  font:inherit; font-size:13px; color:var(--ink); background:#fff; outline:none;
+}
+.editor input:focus, .editor textarea:focus {
+  border-color:var(--accent); box-shadow:0 0 0 3px rgba(99,102,241,.15);
+}
+.editor textarea { min-height:110px; resize:vertical; }
+.palette { display:flex; flex-wrap:wrap; gap:7px; }
+.sw {
+  width:26px; height:26px; border-radius:50%; padding:0;
+  border:2px solid rgba(255,255,255,.9);
+  transition:transform .12s, box-shadow .12s;
+}
+.sw:hover { transform:scale(1.12); }
+.sw.on { box-shadow:0 0 0 2px #fff, 0 0 0 4px #1e293b; }
+.ed-actions { display:flex; justify-content:flex-end; }
+.danger { background:#fef2f2; color:#dc2626; }
+.danger:hover { background:#fecaca; }
+.quick {
+  position:fixed; z-index:1000; background:#fff; border:1px solid var(--line);
+  border-radius:14px; box-shadow:0 16px 40px rgba(15,23,42,.22);
+  padding:10px 12px; width:190px;
+}
+.q-title {
+  font-size:11px; font-weight:700; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.4px; margin-bottom:8px;
+}
+.quick .sw { width:24px; height:24px; }
+#toast {
+  position:fixed; left:50%; bottom:26px; z-index:2000;
+  transform:translateX(-50%) translateY(16px); opacity:0;
+  background:#1e293b; color:#fff; padding:10px 18px; border-radius:999px;
+  font-size:13px; font-weight:600; transition:.25s; pointer-events:none;
+  box-shadow:0 10px 30px rgba(15,23,42,.3);
+}
+#toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+#toast.err { background:#dc2626; }
+.user-chip {
+  font-size:12.5px; font-weight:600;
+  background:rgba(255,255,255,.16); color:#fff;
+  padding:6px 12px; border-radius:999px;
+  max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.btn-solid { background:#6366f1; color:#fff; }
+.btn-solid:hover { background:#4f46e5; }
+#authScreen {
+  position:fixed; inset:0; z-index:3000;
+  display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(120deg,#4f46e5,#7c3aed 60%,#9333ea);
+}
+.auth-card {
+  width:340px; max-width:calc(100vw - 32px);
+  background:#fff; border-radius:18px; padding:28px;
+  box-shadow:0 24px 60px rgba(15,23,42,.35);
+  display:flex; flex-direction:column; gap:12px;
+}
+.auth-card h2 { font-size:18px; color:#0f172a; }
+.auth-sub { font-size:13px; color:#64748b; }
+.auth-card input {
+  width:100%; border:1px solid #e4e8f2; border-radius:10px;
+  padding:11px 13px; font:inherit; font-size:14px; color:#0f172a; outline:none;
+}
+.auth-card input:focus { border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.15); }
+.auth-error { color:#dc2626; font-size:12.5px; min-height:16px; }
+.link-btn { background:transparent; color:#6366f1; font-size:12.5px; padding:4px; }
+.link-btn:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="3"/>
+      <line x1="3" y1="9" x2="21" y2="9"/>
+      <line x1="8" y1="2" x2="8" y2="6"/>
+      <line x1="16" y1="2" x2="16" y2="6"/>
+    </svg>
+    <h1>Calendario de Viajes</h1>
+  </div>
+  <div class="session-controls">
+    <span id="userEmail" class="user-chip"></span>
+    <button id="btnLogout" class="btn-ghost">Salir</button>
+    <input id="sessionName" placeholder="Nombre de la sesión" maxlength="40">
+    <button id="btnNew" class="btn-ghost">Nueva</button>
+    <button id="btnSave" class="btn-accent">Guardar</button>
+    <select id="sessionSelect" title="Sesiones guardadas"></select>
+    <button id="btnLoad" class="btn-ghost">Cargar</button>
+    <button id="btnDeleteSession" class="btn-ghost">Eliminar</button>
+  </div>
+</header>
+
+<div class="toolbar">
+  <label for="yearSel">Añadir mes:</label>
+  <select id="yearSel"></select>
+  <select id="monthSel"></select>
+  <button id="btnAddMonth" class="btn-accent">+ Añadir</button>
+  <span class="hint">Haz clic en un día para abrir sus notas; el marcador de colores aparece junto al día.</span>
+</div>
+
+<div id="authScreen">
+  <div class="auth-card">
+    <h2>Calendario de Viajes</h2>
+    <p class="auth-sub">Entra con tu cuenta para ver tus calendarios.</p>
+    <input id="authEmail" type="email" placeholder="Email" autocomplete="email">
+    <input id="authPass" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <div id="authError" class="auth-error"></div>
+    <button id="authSubmit" class="btn-solid" style="width:100%;">Entrar</button>
+    <button id="authToggle" class="link-btn">¿No tienes cuenta? Regístrate</button>
+  </div>
+</div>
+
+<main id="months"></main>
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore-compat.js"></script>
+<script>
+  var firebaseConfig = {
+    apiKey: "AIzaSyDsh0Bs4Cyro0wz-J_ALQLJO_D5ph16BiY",
+    authDomain: "travel-calendar-b089d.firebaseapp.com",
+    projectId: "travel-calendar-b089d",
+    storageBucket: "travel-calendar-b089d.firebasestorage.app",
+    messagingSenderId: "11714729338",
+    appId: "1:11714729338:web:43eee4a00ecdf444cdb2c3"
+  };
+  firebase.initializeApp(firebaseConfig);
+  var db = firebase.firestore();
+</script>
+<script>
+(function () {
+  "use strict";
+
+  var MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  var WEEKDAYS = ["L","M","X","J","V","S","D"];
+  var PALETTE = ["#ef4444","#f97316","#f59e0b","#84cc16","#22c55e","#14b8a6","#06b6d4","#3b82f6","#8b5cf6","#ec4899"];
+  var LS_PREFIX = "tripcal:user:";
+  var currentUser = null;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var monthsEl = $("months");
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+    });
+  }
+
+  function defaultState() {
+    var now = new Date();
+    return { sessionName:"", months:[{ y:now.getFullYear(), m:now.getMonth()+1, openDay:null, days:{} }] };
+  }
+
+  var state = defaultState();
+
+  var saveTimer = null;
+  function persist() {
+    if (!currentUser) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(persistNow, 250);
+  }
+  function persistNow() {
+    clearTimeout(saveTimer);
+    if (!currentUser) return;
+    localStorage.setItem(LS_PREFIX + currentUser.uid, JSON.stringify(state));
+  }
+
+  function sessionsRef() {
+    return db.collection("users").doc(currentUser.uid).collection("sessions");
+  }
+
+  function getMonth(col) {
+    var y = +col.dataset.y, m = +col.dataset.m;
+    return state.months.find(function (mo) { return mo.y === y && mo.m === m; });
+  }
+  function findCol(month) {
+    return monthsEl.querySelector('.month-col[data-y="' + month.y + '"][data-m="' + month.m + '"]');
+  }
+  function ensure(month, d) {
+    if (!month.days[d]) month.days[d] = { t:"", n:"", c:[] };
+    return month.days[d];
+  }
+  function isToday(month, d) {
+    var now = new Date();
+    return month.y === now.getFullYear() && month.m === now.getMonth()+1 && d === now.getDate();
+  }
+
+  function cellInner(d, data, isT) {
+    var dots = (data && data.c.length)
+      ? '<span class="dots">' +
+        data.c.slice(0,5).map(function (c) { return '<i class="dot" style="background:' + c + '"></i>'; }).join("") +
+        (data.c.length > 5 ? '<em>+' + (data.c.length - 5) + '</em>' : "") +
+        '</span>'
+      : "";
+    var title = (data && data.t) ? '<span class="t">' + esc(data.t) + '</span>' : "";
+    var snip = (data && data.n) ? '<span class="s">' + esc(data.n.replace(/\s+/g, " ").trim()) + '</span>' : "";
+    return '<span class="day-top"><span class="num' + (isT ? ' today' : '') + '">' + d + '</span>' + dots + '</span>' + title + snip;
+  }
+
+  function buildCells(month) {
+    var first = new Date(month.y, month.m - 1, 1);
+    var offset = (first.getDay() + 6) % 7;
+    var total = new Date(month.y, month.m, 0).getDate();
+    var html = "";
+    for (var i = 0; i < offset; i++) html += '<span class="pad"></span>';
+    for (var d = 1; d <= total; d++) {
+      var data = month.days[d];
+      var wk = (offset + d - 1) % 7;
+      var cls = "day";
+      if (month.openDay === d) cls += " sel";
+      if (data && data.c.length) cls += " colored";
+      if (wk >= 5) cls += " wk";
+      var style = (data && data.c.length) ? ' style="--c1:' + data.c[0] + '"' : "";
+      html += '<button class="' + cls + '"' + style + ' data-day="' + d + '">' + cellInner(d, data, isToday(month, d)) + '</button>';
+    }
+    return html;
+  }
+
+  function renderEditor(col, month) {
+    var slot = col.querySelector(".ed-slot");
+    if (month.openDay == null) { slot.innerHTML = ""; return; }
+    var d = month.openDay;
+    var data = month.days[d] || { t:"", n:"", c:[] };
+    slot.innerHTML =
+      '<div class="editor">' +
+        '<div class="ed-head">' +
+          '<span>' + d + ' de ' + MONTHS_ES[month.m - 1] + '</span>' +
+          '<button class="icon-btn" data-act="close" title="Cerrar">×</button>' +
+        '</div>' +
+        '<input class="ed-t" placeholder="Título del día" maxlength="60" value="' + esc(data.t) + '">' +
+        '<textarea class="ed-n" placeholder="Notas: qué hacer, dónde ir, reservas…">' + esc(data.n) + '</textarea>' +
+        '<div class="palette">' +
+          PALETTE.map(function (c, i) {
+            return '<button class="sw' + (data.c.indexOf(c) >= 0 ? ' on' : '') + '" style="background:' + c + '" data-i="' + i + '" title="Marcar color"></button>';
+          }).join("") +
+        '</div>' +
+        '<div class="ed-actions"><button class="danger" data-act="clear">Borrar día</button></div>' +
+      '</div>';
+  }
+
+  function render() {
+    closePopover();
+    monthsEl.innerHTML = "";
+    state.months.forEach(function (month) {
+      var col = document.createElement("section");
+      col.className = "month-col";
+      col.dataset.y = month.y;
+      col.dataset.m = month.m;
+      var noteCount = Object.keys(month.days).length;
+      col.innerHTML =
+        '<div class="m-head">' +
+          '<h2>' + MONTHS_ES[month.m - 1] + ' <span>' + month.y + '</span></h2>' +
+          '<div class="m-head-actions">' +
+            (noteCount ? '<span class="badge">' + noteCount + (noteCount === 1 ? ' nota' : ' notas') + '</span>' : '') +
+            '<button class="icon-btn img-btn" data-act="img" title="Descargar imagen del mes"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>' +
+            '<button class="icon-btn" data-act="rm" title="Quitar mes">×</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="cal">' +
+          '<div class="weekdays">' + WEEKDAYS.map(function (w) { return '<span>' + w + '</span>'; }).join("") + '</div>' +
+          '<div class="grid">' + buildCells(month) + '</div>' +
+        '</div>' +
+        '<div class="ed-slot"></div>';
+      monthsEl.appendChild(col);
+      if (month.openDay != null) renderEditor(col, month);
+    });
+  }
+
+  function updateCell(month, d) {
+    var col = findCol(month);
+    var cell = col && col.querySelector('.day[data-day="' + d + '"]');
+    if (!cell) return;
+    var data = month.days[d];
+    cell.classList.toggle("colored", !!(data && data.c.length));
+    if (data && data.c.length) cell.style.setProperty("--c1", data.c[0]);
+    else cell.style.removeProperty("--c1");
+    cell.innerHTML = cellInner(d, data, isToday(month, d));
+  }
+
+  function toggleColor(month, d, color) {
+    var data = ensure(month, d);
+    var i = data.c.indexOf(color);
+    if (i >= 0) data.c.splice(i, 1); else data.c.push(color);
+    updateCell(month, d);
+    syncPalettes(month, d);
+    persist();
+  }
+
+  function syncPalettes(month, d) {
+    var col = findCol(month);
+    if (col && month.openDay === d) {
+      var data = month.days[d];
+      col.querySelectorAll(".editor .sw").forEach(function (sw) {
+        sw.classList.toggle("on", !!(data && data.c.indexOf(PALETTE[+sw.dataset.i]) >= 0));
+      });
+    }
+    if (popoverEl) {
+      var pd = month.days[d];
+      popoverEl.querySelectorAll(".sw").forEach(function (sw) {
+        sw.classList.toggle("on", !!(pd && pd.c.indexOf(PALETTE[+sw.dataset.i]) >= 0));
+      });
+    }
+  }
+
+  var popoverEl = null;
+  var popoverTarget = null;
+
+  function downloadMonthImage(month) {
+    var col = findCol(month);
+    if (!col) return;
+    var clone = col.cloneNode(true);
+    clone.querySelectorAll(".icon-btn, .ed-slot").forEach(function (el) { el.remove(); });
+    var styleText = "";
+    var styleEl = document.querySelector("style");
+    if (styleEl) styleText = styleEl.textContent;
+    styleText += "\n.month-col{box-shadow:none;border:1px solid #e4e8f2;--bg:#eef1f8;--card:#ffffff;--line:#e4e8f2;--ink:#0f172a;--muted:#64748b;--accent:#6366f1;}";
+
+    var w = col.offsetWidth;
+    var holder = document.createElement("div");
+    holder.style.cssText = "position:fixed;left:-10000px;top:0;width:" + w + "px;";
+    holder.appendChild(clone);
+    document.body.appendChild(holder);
+    var h = clone.offsetHeight + 2;
+    holder.remove();
+
+    var svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '">' +
+        '<foreignObject width="100%" height="100%">' +
+          '<div xmlns="http://www.w3.org/1999/xhtml" style="width:' + w + 'px;min-height:' + h + 'px;font-family:\'Segoe UI\',system-ui,-apple-system,\'Helvetica Neue\',Arial,sans-serif;color:#0f172a;background:#ffffff;">' +
+            '<style>' + styleText + '</style>' +
+            clone.outerHTML +
+          '</div>' +
+        '</foreignObject>' +
+      '</svg>';
+
+    var img = new Image();
+    img.onload = function () {
+      var scale = 2;
+      var cvs = document.createElement("canvas");
+      cvs.width = w * scale;
+      cvs.height = h * scale;
+      var ctx = cvs.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, cvs.width, cvs.height);
+      ctx.drawImage(img, 0, 0, cvs.width, cvs.height);
+      cvs.toBlob(function (blob) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = MONTHS_ES[month.m - 1] + " " + month.y + ".png";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+      }, "image/png");
+    };
+    img.onerror = function () { toast("No se pudo generar la imagen.", false); };
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  }
+
+  function showPopover(cell, month, d) {
+    closePopover();
+    popoverTarget = { month: month, d: d };
+    popoverEl = document.createElement("div");
+    popoverEl.className = "quick";
+    var data = month.days[d];
+    popoverEl.innerHTML =
+      '<div class="q-title">Marcar colores</div>' +
+      '<div class="palette">' +
+        PALETTE.map(function (c, i) {
+          return '<button class="sw' + (data && data.c.indexOf(c) >= 0 ? ' on' : '') + '" style="background:' + c + '" data-i="' + i + '"></button>';
+        }).join("") +
+      '</div>';
+    document.body.appendChild(popoverEl);
+    var r = cell.getBoundingClientRect();
+    var w = popoverEl.offsetWidth, h = popoverEl.offsetHeight;
+    var left = Math.min(r.left, window.innerWidth - w - 10);
+    var top = r.bottom + 6;
+    if (top + h > window.innerHeight - 10) top = Math.max(10, r.top - h - 6);
+    popoverEl.style.left = Math.max(10, left) + "px";
+    popoverEl.style.top = top + "px";
+  }
+
+  function closePopover() {
+    if (popoverEl) popoverEl.remove();
+    popoverEl = null;
+    popoverTarget = null;
+  }
+
+  monthsEl.addEventListener("click", function (e) {
+    if (e.target.closest("[data-act='img']")) {
+      var colImg = e.target.closest(".month-col");
+      var monthImg = getMonth(colImg);
+      downloadMonthImage(monthImg);
+      toast("Imagen de " + MONTHS_ES[monthImg.m - 1] + " " + monthImg.y + " descargada.");
+      return;
+    }
+    if (e.target.closest("[data-act='rm']")) {
+      var col = e.target.closest(".month-col");
+      var month = getMonth(col);
+      if (state.months.length <= 1) { toast("Necesitas al menos un mes en el calendario.", false); return; }
+      var has = month.days && Object.keys(month.days).length;
+      if (!has || confirm("¿Quitar " + MONTHS_ES[month.m - 1] + " " + month.y + "? Se perderán sus notas.")) {
+        state.months = state.months.filter(function (mo) { return mo !== month; });
+        render(); persist();
+        toast("Mes quitado.");
+      }
+      return;
+    }
+    if (e.target.closest("[data-act='close']")) {
+      var col2 = e.target.closest(".month-col");
+      var month2 = getMonth(col2);
+      month2.openDay = null;
+      render(); persist();
+      return;
+    }
+    if (e.target.closest("[data-act='clear']")) {
+      var col3 = e.target.closest(".month-col");
+      var month3 = getMonth(col3);
+      var d3 = month3.openDay;
+      if (confirm("¿Borrar la nota del día " + d3 + "?")) {
+        delete month3.days[d3];
+        render(); persist();
+        toast("Día borrado.");
+      }
+      return;
+    }
+    var sw = e.target.closest(".editor .sw");
+    if (sw) {
+      var col4 = e.target.closest(".month-col");
+      var month4 = getMonth(col4);
+      if (month4.openDay != null) toggleColor(month4, month4.openDay, PALETTE[+sw.dataset.i]);
+      return;
+    }
+    var cell = e.target.closest(".day");
+    if (cell) {
+      var col5 = cell.closest(".month-col");
+      var month5 = getMonth(col5);
+      var d5 = +cell.dataset.day;
+      if (month5.openDay === d5) {
+        month5.openDay = null;
+        render(); persist();
+      } else {
+        month5.openDay = d5;
+        render(); persist();
+        var fresh = findCol(month5);
+        showPopover(fresh.querySelector('.day[data-day="' + d5 + '"]'), month5, d5);
+        var ed = fresh.querySelector(".editor");
+        if (ed) ed.scrollIntoView({ behavior:"smooth", block:"nearest" });
+      }
+      return;
+    }
+  });
+
+  monthsEl.addEventListener("input", function (e) {
+    var col = e.target.closest(".month-col");
+    if (!col) return;
+    var month = getMonth(col);
+    var d = month && month.openDay;
+    if (d == null) return;
+    if (e.target.classList.contains("ed-t")) ensure(month, d).t = e.target.value;
+    else if (e.target.classList.contains("ed-n")) ensure(month, d).n = e.target.value;
+    updateCell(month, d);
+    persist();
+  });
+
+  document.addEventListener("click", function (e) {
+    if (!popoverEl) return;
+    if (popoverEl.contains(e.target)) {
+      var sw = e.target.closest(".sw");
+      if (sw && popoverTarget) toggleColor(popoverTarget.month, popoverTarget.d, PALETTE[+sw.dataset.i]);
+    } else if (!e.target.closest(".day")) {
+      closePopover();
+    }
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") closePopover();
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+      e.preventDefault();
+      saveSession();
+    }
+  });
+
+  window.addEventListener("resize", closePopover);
+  window.addEventListener("beforeunload", persistNow);
+
+  var toastTimer = null;
+  function toast(msg, ok) {
+    var t = $("toast");
+    t.textContent = msg;
+    t.classList.toggle("err", ok === false);
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove("show"); }, 2400);
+  }
+
+  function refreshSessionSelect() {
+    if (!currentUser) return;
+    var sel = $("sessionSelect");
+    var prev = sel.value;
+    sessionsRef().orderBy("name").get().then(function (snap) {
+      var names = [];
+      snap.forEach(function (doc) { names.push(doc.data().name); });
+      sel.innerHTML = names.length
+        ? names.map(function (n) { return '<option value="' + esc(n) + '">' + esc(n) + '</option>'; }).join("")
+        : '<option value="">— Sin sesiones —</option>';
+      if (names.indexOf(prev) >= 0) sel.value = prev;
+    }).catch(function (err) {
+      toast("Error al cargar tus sesiones: " + err.message, false);
+    });
+  }
+
+  function saveSession() {
+    var name = $("sessionName").value.trim();
+    if (!name) { toast("Ponle nombre a la sesión antes de guardar.", false); return; }
+    state.sessionName = name;
+    var doc = sessionsRef().doc(encodeURIComponent(name));
+    doc.get().then(function (snap) {
+      if (snap.exists && !confirm('Ya existe una sesión "' + name + '". ¿Sobrescribirla?')) return false;
+      return doc.set({
+        name: name,
+        data: JSON.parse(JSON.stringify(state)),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function () { return true; });
+    }).then(function (ok) {
+      if (!ok) return;
+      persistNow();
+      refreshSessionSelect();
+      toast('Sesión "' + name + '" guardada.');
+    }).catch(function (err) {
+      toast("Error al guardar: " + err.message, false);
+    });
+  }
+
+  function initControls() {
+    var yearSel = $("yearSel"), monthSel = $("monthSel");
+    var now = new Date();
+    for (var y = now.getFullYear() - 1; y <= now.getFullYear() + 2; y++) {
+      var o = document.createElement("option");
+      o.value = y; o.textContent = y;
+      yearSel.appendChild(o);
+    }
+    yearSel.value = now.getFullYear();
+    MONTHS_ES.forEach(function (m, i) {
+      var o2 = document.createElement("option");
+      o2.value = i + 1; o2.textContent = m;
+      monthSel.appendChild(o2);
+    });
+    monthSel.value = now.getMonth() + 1;
+
+    $("btnAddMonth").addEventListener("click", function () {
+      var y = +yearSel.value, m = +monthSel.value;
+      if (state.months.some(function (mo) { return mo.y === y && mo.m === m; })) {
+        toast("Ese mes ya está en el calendario.", false);
+        return;
+      }
+      state.months.push({ y: y, m: m, openDay: null, days: {} });
+      state.months.sort(function (a, b) { return a.y - b.y || a.m - b.m; });
+      render(); persist();
+      toast(MONTHS_ES[m - 1] + " " + y + " añadido.");
+    });
+
+    $("btnNew").addEventListener("click", function () {
+      var hasData = state.months.some(function (mo) { return Object.keys(mo.days).length > 0; });
+      if (hasData && !confirm("¿Crear una sesión nueva? Se descartará el contenido actual.")) return;
+      state = defaultState();
+      $("sessionName").value = "";
+      render(); persist();
+      refreshSessionSelect();
+      $("sessionName").focus();
+      toast("Sesión nueva.");
+    });
+
+    $("btnSave").addEventListener("click", saveSession);
+
+    $("btnLoad").addEventListener("click", function () {
+      var name = $("sessionSelect").value;
+      if (!name) { toast("No hay ninguna sesión que cargar.", false); return; }
+      sessionsRef().doc(encodeURIComponent(name)).get().then(function (snap) {
+        if (!snap.exists) { toast("Esa sesión ya no existe.", false); return; }
+        var d = snap.data();
+        state = d.data;
+        $("sessionName").value = state.sessionName || name;
+        render(); persist();
+        toast('Sesión "' + name + '" cargada.');
+      }).catch(function (err) {
+        toast("Error al cargar: " + err.message, false);
+      });
+    });
+
+    $("btnDeleteSession").addEventListener("click", function () {
+      var name = $("sessionSelect").value;
+      if (!name) { toast("No hay sesión seleccionada.", false); return; }
+      if (!confirm('¿Eliminar la sesión "' + name + '"?')) return;
+      sessionsRef().doc(encodeURIComponent(name)).delete().then(function () {
+        refreshSessionSelect();
+        toast('Sesión "' + name + '" eliminada.');
+      }).catch(function (err) {
+        toast("Error al eliminar: " + err.message, false);
+      });
+    });
+  }
+
+  initControls();
+
+  var authMode = "login";
+  var AUTH_ERRORS = {
+    "auth/invalid-credential": "Email o contraseña incorrectos.",
+    "auth/wrong-password": "Email o contraseña incorrectos.",
+    "auth/user-not-found": "No existe una cuenta con ese email.",
+    "auth/email-already-in-use": "Ya existe una cuenta con ese email.",
+    "auth/weak-password": "La contraseña debe tener al menos 6 caracteres.",
+    "auth/invalid-email": "Email no válido.",
+    "auth/too-many-requests": "Demasiados intentos. Espera un momento e inténtalo de nuevo."
+  };
+
+  function setAuthMode(mode) {
+    authMode = mode;
+    $("authSubmit").textContent = mode === "login" ? "Entrar" : "Crear cuenta";
+    $("authToggle").textContent = mode === "login" ? "¿No tienes cuenta? Regístrate" : "¿Ya tienes cuenta? Entrar";
+    $("authError").textContent = "";
+  }
+
+  $("authToggle").addEventListener("click", function () {
+    setAuthMode(authMode === "login" ? "register" : "login");
+  });
+
+  $("authSubmit").addEventListener("click", function () {
+    var email = $("authEmail").value.trim();
+    var pass = $("authPass").value;
+    $("authError").textContent = "";
+    if (!email || !pass) { $("authError").textContent = "Introduce email y contraseña."; return; }
+    var promise = authMode === "login"
+      ? firebase.auth().signInWithEmailAndPassword(email, pass)
+      : firebase.auth().createUserWithEmailAndPassword(email, pass);
+    promise.catch(function (err) {
+      $("authError").textContent = AUTH_ERRORS[err.code] || err.message;
+    });
+  });
+
+  $("authPass").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") $("authSubmit").click();
+  });
+
+  $("btnLogout").addEventListener("click", function () {
+    persistNow();
+    firebase.auth().signOut().catch(function () {});
+  });
+
+  if (typeof firebase === "undefined" || !firebase.apps || !firebase.apps.length) {
+    $("authError").textContent = "No se pudo conectar con Firebase. Revisa tu conexión a internet.";
+    return;
+  }
+
+  firebase.auth().onAuthStateChanged(function (user) {
+    if (user) {
+      currentUser = user;
+      var saved = null;
+      try { saved = JSON.parse(localStorage.getItem(LS_PREFIX + user.uid)); } catch (e) {}
+      if (saved === null) {
+        var old = null;
+        try { old = JSON.parse(localStorage.getItem("tripcal:current")); } catch (e) {}
+        if (old && Array.isArray(old.months)) {
+          saved = old;
+          localStorage.setItem(LS_PREFIX + user.uid, old);
+          localStorage.removeItem("tripcal:current");
+        }
+      }
+      state = (saved && Array.isArray(saved.months)) ? saved : defaultState();
+      $("userEmail").textContent = user.email;
+      $("userEmail").title = user.email;
+      $("authScreen").style.display = "none";
+      $("sessionName").value = state.sessionName || "";
+      render();
+      refreshSessionSelect();
+    } else {
+      currentUser = null;
+      $("authScreen").style.display = "flex";
+    }
+  });
+})();
+</script>
+</body>
+</html>
